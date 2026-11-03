@@ -74,3 +74,40 @@ Delegating to curl's `CURLOPT_FOLLOWLOCATION` would perform hops that never pass
 caps the response at a few hundred points. Reading 30 days of raw rows is acceptable for v1's
 volume but is exactly what `daily_stats` replaces in Milestone 5; the endpoint shape will not
 change.
+
+## D8 — Lifecycle of an incident lives in `IncidentService` (Milestone 3)
+
+`RunMonitorCheck` only stores the result and updates the monitor row; it then hands the
+`CheckResult` to `IncidentService`, which owns opening (on the check that crosses
+`alert_after_failures`), resolving (on the first success) and queuing exactly one alert per
+transition. Keeping this out of the job makes the state machine testable without HTTP fakes and
+keeps the "no repeated down alerts" guarantee in one place.
+
+## D9 — Flapping guard suppresses every alert while unstable (Milestone 3)
+
+The PRD asks for recovery alerts to be suppressed for an hour after a monitor opens 4+ incidents
+in an hour, plus a single "unstable" alert. Implemented with `monitors.unstable_until`: when the
+fourth incident in the window opens, one unstable alert is queued and the column is set an hour
+ahead. While it is in the future, incidents are still recorded but neither down nor recovery
+alerts are sent; once it has passed the monitor behaves normally again. Suppressing the down
+alerts too avoids the obvious follow-on spam the PRD is trying to prevent.
+
+## D10 — Test alerts have no monitor (Milestone 3)
+
+The "Test alert" button sends from the channel screen, so `alert_logs.monitor_id` is nullable and
+such rows carry `event = test` with no monitor or incident. Every other alert row always has a
+monitor.
+
+## D11 — Telegram chats are found by decrypting channel config (Milestone 3)
+
+`notification_channels.config` is encrypted at rest, so a chat id cannot be used in a SQL
+`where`. The webhook loads the Telegram channels and filters on the decrypted `chat_id`. At v1
+scale (hundreds of channels) this is cheap; a hashed `chat_id` lookup column is the upgrade path
+if the table grows.
+
+## D12 — Alert delivery is retried by the queue, logged on the final failure (Milestone 3)
+
+`SendAlert` runs on the `alerts` queue with `tries = 3` and backoff 10s/60s. Success writes a
+`sent` row and revives the channel; `failed()` (called after the last attempt) writes the `failed`
+row and marks the channel `needs_attention`. Test alerts are sent synchronously so the UI can
+report the result immediately.

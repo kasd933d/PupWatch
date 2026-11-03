@@ -6,6 +6,7 @@ use App\Jobs\RunMonitorCheck;
 use App\Models\CheckResult;
 use App\Models\Monitor;
 use App\Services\CheckService;
+use App\Services\IncidentService;
 use App\Services\MonitorScheduler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -17,7 +18,10 @@ class RunMonitorCheckTest extends TestCase
 
     private function runCheck(Monitor $monitor): void
     {
-        (new RunMonitorCheck($monitor->id))->handle($this->app->make(CheckService::class));
+        (new RunMonitorCheck($monitor->id))->handle(
+            $this->app->make(CheckService::class),
+            $this->app->make(IncidentService::class),
+        );
     }
 
     public function test_a_check_is_stored_and_the_monitor_turns_up(): void
@@ -131,7 +135,10 @@ class RunMonitorCheckTest extends TestCase
         $id = $monitor->id;
         $monitor->delete();
 
-        (new RunMonitorCheck($id))->handle($this->app->make(CheckService::class));
+        (new RunMonitorCheck($id))->handle(
+            $this->app->make(CheckService::class),
+            $this->app->make(IncidentService::class),
+        );
 
         $this->assertDatabaseCount('check_results', 0);
         Http::assertNothingSent();

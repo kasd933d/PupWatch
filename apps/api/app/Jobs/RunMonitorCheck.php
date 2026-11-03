@@ -6,6 +6,7 @@ use App\Models\CheckResult as CheckResultModel;
 use App\Models\Monitor;
 use App\Services\CheckEngine\CheckResult;
 use App\Services\CheckService;
+use App\Services\IncidentService;
 use App\Services\MonitorScheduler;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,7 +32,7 @@ class RunMonitorCheck implements ShouldQueue
         $this->onQueue('checks');
     }
 
-    public function handle(CheckService $checks): void
+    public function handle(CheckService $checks, IncidentService $incidents): void
     {
         $monitor = Monitor::find($this->monitorId);
 
@@ -58,6 +59,9 @@ class RunMonitorCheck implements ShouldQueue
         ]);
 
         $this->applyResult($monitor, $result);
+
+        // PRD §4.4 — the state machine runs after the monitor row is current.
+        $incidents->afterCheck($monitor, $result);
     }
 
     private function applyResult(Monitor $monitor, CheckResult $result): void

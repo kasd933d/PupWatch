@@ -17,4 +17,7 @@ return [
     // Redirect hops followed, each one fully re-validated (PRD §5.5).
     'max_redirects' => 5,
 
+    // Public origin used in alert links.
+    'app_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
 ];

@@ -32,6 +32,39 @@ export interface Monitor {
   created_at: string;
 }
 
+export type ChannelType = "telegram" | "discord" | "email";
+
+export interface NotificationChannel {
+  id: number;
+  type: ChannelType;
+  name: string;
+  status: "active" | "needs_attention";
+  last_used_at: string | null;
+  monitor_ids?: number[];
+  created_at: string;
+}
+
+export interface TelegramLink {
+  code: string;
+  expires_at: string;
+  bot_username: string;
+  deep_link: string | null;
+  instructions: string;
+}
+
+export interface Incident {
+  id: number;
+  monitor_id: number;
+  monitor_name?: string;
+  monitor_host?: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  first_error_type: string | null;
+  first_error_message: string | null;
+  status: "open" | "resolved";
+}
+
 export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;

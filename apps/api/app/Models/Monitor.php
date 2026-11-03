@@ -6,6 +6,7 @@ use Database\Factories\MonitorFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Monitor extends Model
@@ -47,6 +48,7 @@ class Monitor extends Model
         'last_response_ms',
         'next_check_at',
         'claimed_at',
+        'unstable_until',
     ];
 
     /** @var array<string, string> */
@@ -62,6 +64,7 @@ class Monitor extends Model
         'last_checked_at' => 'datetime',
         'next_check_at' => 'datetime',
         'claimed_at' => 'datetime',
+        'unstable_until' => 'datetime',
     ];
 
     public function owner(): BelongsTo
@@ -73,6 +76,18 @@ class Monitor extends Model
     public function results(): HasMany
     {
         return $this->hasMany(CheckResult::class);
+    }
+
+    /** @return HasMany<Incident, $this> */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(Incident::class);
+    }
+
+    /** @return BelongsToMany<NotificationChannel, $this> */
+    public function channels(): BelongsToMany
+    {
+        return $this->belongsToMany(NotificationChannel::class, 'monitor_channel')->withTimestamps();
     }
 
     /**

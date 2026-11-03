@@ -1,4 +1,11 @@
-import type { ApiError, Monitor, User } from "./types";
+import type {
+  ApiError,
+  Incident,
+  Monitor,
+  NotificationChannel,
+  TelegramLink,
+  User,
+} from "./types";
 
 /**
  * All requests go to this app's own route handlers, which hold the Sanctum
@@ -50,6 +57,25 @@ export interface Paginated<T> {
   meta: unknown;
 }
 
+export interface MonitorChartPoint {
+  t: string;
+  avg_ms: number | null;
+  min_ms: number | null;
+  max_ms: number | null;
+  checks: number;
+  failures: number;
+}
+
+export interface MonitorCheck {
+  id: number;
+  checked_at: string;
+  status_code: number | null;
+  response_time_ms: number | null;
+  is_success: boolean;
+  error_type: string | null;
+  error_message: string | null;
+}
+
 export const api = {
   register: (input: {
     name: string;
@@ -91,4 +117,44 @@ export const api = {
 
   checkNow: (id: number) =>
     request<{ monitor: Monitor }>(`${API_ROOT}/monitors/${id}/check`, { method: "POST" }),
+
+  monitorResults: (id: number, range: "24h" | "7d" | "30d") =>
+    request<{ range: string; bucket_seconds: number; points: MonitorChartPoint[] }>(
+      `${API_ROOT}/monitors/${id}/results?range=${range}`,
+    ),
+
+  monitorChecks: (id: number) =>
+    request<{ data: MonitorCheck[] }>(`${API_ROOT}/monitors/${id}/checks`),
+
+  listIncidents: (params: { status?: string; monitor_id?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.set("status", params.status);
+    if (params.monitor_id) query.set("monitor_id", String(params.monitor_id));
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return request<Paginated<Incident>>(`${API_ROOT}/incidents${suffix}`);
+  },
+
+  listChannels: () => request<Paginated<NotificationChannel>>(`${API_ROOT}/channels`),
+
+  addDiscordChannel: (input: { name: string; webhook_url: string }) =>
+    request<{ channel: NotificationChannel }>(`${API_ROOT}/channels/discord`, {
+      method: "POST",
+      body: input,
+    }),
+
+  telegramLink: () =>
+    request<TelegramLink>(`${API_ROOT}/channels/telegram/link`, { method: "POST" }),
+
+  testChannel: (id: number) =>
+    request<{ message: string }>(`${API_ROOT}/channels/${id}/test`, { method: "POST" }),
+
+  deleteChannel: (id: number) =>
+    request<{ message: string }>(`${API_ROOT}/channels/${id}`, { method: "DELETE" }),
+
+  setMonitorChannels: (id: number, channelIds: number[]) =>
+    request<{ monitor: Monitor }>(`${API_ROOT}/monitors/${id}/channels`, {
+      method: "PUT",
+      body: { channel_ids: channelIds },
+    }),
 };

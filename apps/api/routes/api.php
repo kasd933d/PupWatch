@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\MonitorController;
+use App\Http\Controllers\Api\NotificationChannelController;
+use App\Http\Controllers\Api\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,8 +31,13 @@ Route::prefix('v1')->group(function () {
         Route::delete('/me', [AuthController::class, 'destroy']);
     });
 
-    // --- Monitors ----------------------------------------------------------
+    // --- Webhooks (public, secret-protected) --------------------------------
+    Route::post('/telegram/webhook/{secret}', TelegramWebhookController::class)
+        ->middleware('throttle:public');
+
+    // --- Authenticated API --------------------------------------------------
     Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+        // Monitors
         Route::get('/monitors', [MonitorController::class, 'index']);
         Route::post('/monitors', [MonitorController::class, 'store']);
         Route::get('/monitors/{monitor}', [MonitorController::class, 'show'])->whereNumber('monitor');
@@ -40,5 +48,17 @@ Route::prefix('v1')->group(function () {
         Route::post('/monitors/{monitor}/check', [MonitorController::class, 'checkNow'])->whereNumber('monitor');
         Route::get('/monitors/{monitor}/results', [MonitorController::class, 'results'])->whereNumber('monitor');
         Route::get('/monitors/{monitor}/checks', [MonitorController::class, 'checks'])->whereNumber('monitor');
+        Route::get('/monitors/{monitor}/incidents', [IncidentController::class, 'forMonitor'])->whereNumber('monitor');
+        Route::put('/monitors/{monitor}/channels', [MonitorController::class, 'syncChannels'])->whereNumber('monitor');
+
+        // Incidents
+        Route::get('/incidents', [IncidentController::class, 'index']);
+
+        // Channels
+        Route::get('/channels', [NotificationChannelController::class, 'index']);
+        Route::post('/channels/discord', [NotificationChannelController::class, 'storeDiscord']);
+        Route::post('/channels/telegram/link', [NotificationChannelController::class, 'telegramLink']);
+        Route::post('/channels/{channel}/test', [NotificationChannelController::class, 'test'])->whereNumber('channel');
+        Route::delete('/channels/{channel}', [NotificationChannelController::class, 'destroy'])->whereNumber('channel');
     });
 });

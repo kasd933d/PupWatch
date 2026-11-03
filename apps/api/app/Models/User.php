@@ -55,4 +55,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(Monitor::class);
     }
+
+    /** @return HasMany<NotificationChannel, $this> */
+    public function channels(): HasMany
+    {
+        return $this->hasMany(NotificationChannel::class);
+    }
+
+    /** @return HasMany<TelegramLinkToken, $this> */
+    public function telegramLinkTokens(): HasMany
+    {
+        return $this->hasMany(TelegramLinkToken::class);
+    }
 }

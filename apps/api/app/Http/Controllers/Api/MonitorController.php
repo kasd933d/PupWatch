@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Channel\LinkChannelsRequest;
 use App\Http\Requests\Monitor\StoreMonitorRequest;
 use App\Http\Requests\Monitor\UpdateMonitorRequest;
 use App\Http\Resources\MonitorResource;
@@ -119,6 +120,18 @@ class MonitorController extends Controller
         MonitorScheduler::due($monitor);
 
         return response()->json(['monitor' => new MonitorResource($monitor->refresh())], 202);
+    }
+
+    /**
+     * PUT /monitors/{id}/channels — set which alert channels receive this monitor.
+     */
+    public function syncChannels(LinkChannelsRequest $request, Monitor $monitor): JsonResponse
+    {
+        $monitor->channels()->sync($request->input('channel_ids', []));
+
+        return response()->json([
+            'monitor' => new MonitorResource($monitor->load('channels')),
+        ]);
     }
 
     /**

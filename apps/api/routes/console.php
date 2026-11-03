@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\DispatchDueChecks;
+use App\Jobs\PruneExpiredTelegramTokens;
 use App\Jobs\RecoverStuckClaims;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -27,4 +28,9 @@ Schedule::call(new DispatchDueChecks)
 Schedule::call(new RecoverStuckClaims)
     ->everyFiveMinutes()
     ->name('recover-stuck-claims')
+    ->withoutOverlapping();
+
+Schedule::call(new PruneExpiredTelegramTokens)
+    ->everyTenMinutes()
+    ->name('prune-telegram-tokens')
     ->withoutOverlapping();
