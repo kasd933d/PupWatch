@@ -39,6 +39,14 @@ class MonitorScheduler
     }
 
     /**
+     * Release a claim without rescheduling (paused/deleted while in flight).
+     */
+    public static function releaseClaim(Monitor $monitor): void
+    {
+        $monitor->forceFill(['claimed_at' => null])->save();
+    }
+
+    /**
      * PRD §4.2 — pausing stops checks immediately.
      */
     public static function pause(Monitor $monitor): void

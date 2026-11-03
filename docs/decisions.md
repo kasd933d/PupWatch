@@ -47,3 +47,30 @@ The Compose stack uses the PHP CLI image with `artisan serve` (api), `queue:work
 `schedule:run` loop (scheduler). That is enough for v1's single-region, single-pool assumption
 (PRD §13). Swapping the API container for php-fpm + nginx is a deployment change only; nothing in
 the application depends on it.
+## D5 — DNS is resolved at save time, but an unresolvable host still saves (Milestone 2)
+
+**PRD says:** SSRF rules are enforced "at save time AND at every check" (§5).
+
+**Decision:** at save time the guard always enforces the structural rules (scheme, port,
+credentials, blocked hostnames, blocked IP literals) and additionally resolves the hostname,
+rejecting the save when any resolved IP is private or reserved. If DNS itself fails, the save
+is allowed and the first check records a `dns_failure` result.
+
+**Why:** a save must not depend on the user's DNS being up at that moment, and the failure
+belongs in the check history rather than in a validation error. Every check re-resolves and
+re-validates from scratch, so a host that later starts answering with a private IP is blocked
+at check time. Tests bind `Tests\Support\FakeDnsResolver` through the container so the whole
+suite is deterministic and offline-safe.
+
+## D6 — Redirects are followed by the application, not by curl (Milestone 2)
+
+`CheckService` sends every request with `allow_redirects = false` and walks up to 5 `Location`
+headers itself, validating each hop (scheme, host, port, DNS, pinned IP) before requesting it.
+Delegating to curl's `CURLOPT_FOLLOWLOCATION` would perform hops that never pass the guard.
+
+## D7 — Charts read raw `check_results` until Milestone 5 (Milestone 2)
+
+`GET /monitors/{id}/results` buckets rows in PHP (5 min for 24h, 1 h for 7d, 6 h for 30d) and
+caps the response at a few hundred points. Reading 30 days of raw rows is acceptable for v1's
+volume but is exactly what `daily_stats` replaces in Milestone 5; the endpoint shape will not
+change.

@@ -38,5 +38,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/monitors/{monitor}/pause', [MonitorController::class, 'pause'])->whereNumber('monitor');
         Route::post('/monitors/{monitor}/resume', [MonitorController::class, 'resume'])->whereNumber('monitor');
         Route::post('/monitors/{monitor}/check', [MonitorController::class, 'checkNow'])->whereNumber('monitor');
+        Route::get('/monitors/{monitor}/results', [MonitorController::class, 'results'])->whereNumber('monitor');
+        Route::get('/monitors/{monitor}/checks', [MonitorController::class, 'checks'])->whereNumber('monitor');
     });
 });

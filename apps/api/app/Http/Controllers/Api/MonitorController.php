@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Monitor\StoreMonitorRequest;
 use App\Http\Requests\Monitor\UpdateMonitorRequest;
 use App\Http\Resources\MonitorResource;
+use App\Models\CheckResult;
 use App\Models\Monitor;
+use App\Services\ChartService;
 use App\Services\MonitorScheduler;
+use App\Services\UptimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -15,7 +18,7 @@ use Illuminate\Support\Facades\Cache;
 
 class MonitorController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly UptimeService $uptime)
     {
         $this->authorizeResource(Monitor::class, 'monitor');
     }
@@ -26,6 +29,13 @@ class MonitorController extends Controller
             ->monitors()
             ->orderBy('created_at')
             ->paginate(min((int) $request->input('per_page', 50), 50));
+
+        $summaries = $this->uptime->summariesFor($monitors->pluck('id')->all(), '24h');
+
+        $monitors->getCollection()->each(function (Monitor $monitor) use ($summaries) {
+            $summary = $summaries[$monitor->id] ?? null;
+            $monitor->uptime_summary = $summary;
+        });
 
         return MonitorResource::collection($monitors);
     }
@@ -47,6 +57,9 @@ class MonitorController extends Controller
 
     public function show(Monitor $monitor): JsonResponse
     {
+        $monitor->uptime_summary = $this->uptime->summary($monitor, '24h');
+        $monitor->uptime_ranges = $this->uptime->allRanges($monitor);
+
         return response()->json(['monitor' => new MonitorResource($monitor)]);
     }
 
@@ -106,5 +119,31 @@ class MonitorController extends Controller
         MonitorScheduler::due($monitor);
 
         return response()->json(['monitor' => new MonitorResource($monitor->refresh())], 202);
+    }
+
+    /**
+     * GET /monitors/{id}/results?range=24h|7d|30d — downsampled chart data.
+     */
+    public function results(Request $request, Monitor $monitor, ChartService $charts): JsonResponse
+    {
+        $range = (string) $request->query('range', '24h');
+
+        abort_unless(in_array($range, ['24h', '7d', '30d'], true), 422, 'Range must be 24h, 7d or 30d.');
+
+        return response()->json($charts->series($monitor, $range));
+    }
+
+    /**
+     * GET /monitors/{id}/checks — last 50 raw checks.
+     */
+    public function checks(Monitor $monitor): JsonResponse
+    {
+        $checks = CheckResult::query()
+            ->where('monitor_id', $monitor->id)
+            ->orderByDesc('checked_at')
+            ->limit(50)
+            ->get(['id', 'checked_at', 'status_code', 'response_time_ms', 'is_success', 'error_type', 'error_message']);
+
+        return response()->json(['data' => $checks]);
     }
 }

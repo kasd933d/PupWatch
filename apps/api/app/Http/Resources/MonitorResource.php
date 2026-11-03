@@ -37,6 +37,8 @@ class MonitorResource extends JsonResource
             'last_checked_at' => $this->last_checked_at?->toIso8601String(),
             'last_response_ms' => $this->last_response_ms,
             'next_check_at' => $this->next_check_at?->toIso8601String(),
+            'uptime' => $this->uptime_summary ?? null,
+            'uptime_ranges' => $this->uptime_ranges ?? null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

@@ -6,6 +6,7 @@ use Database\Factories\MonitorFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Monitor extends Model
 {
@@ -19,6 +20,10 @@ class Monitor extends Model
     public const STATUS_DOWN = 'down';
 
     public const STATUS_PAUSED = 'paused';
+
+    public const KEYWORD_MUST_CONTAIN = 'must_contain';
+
+    public const KEYWORD_MUST_NOT_CONTAIN = 'must_not_contain';
 
     /** @var list<string> */
     protected $fillable = [
@@ -62,6 +67,12 @@ class Monitor extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @return HasMany<CheckResult, $this> */
+    public function results(): HasMany
+    {
+        return $this->hasMany(CheckResult::class);
     }
 
     /**

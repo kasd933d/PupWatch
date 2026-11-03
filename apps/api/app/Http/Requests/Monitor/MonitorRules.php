@@ -66,12 +66,13 @@ class MonitorRules
     }
 
     /**
-     * PRD §5 — reject structurally unsafe targets at save time.
+     * PRD §4.2/§5 — reject unsafe targets at save time (structure always,
+     * DNS when it is reachable).
      */
     private static function blockedUrl(): callable
     {
         return function (string $attribute, mixed $value, \Closure $fail): void {
-            foreach (SsrfGuard::validateUrl((string) $value) as $error) {
+            foreach (app(SsrfGuard::class)->saveTimeErrors((string) $value) as $error) {
                 $fail($error);
             }
         };

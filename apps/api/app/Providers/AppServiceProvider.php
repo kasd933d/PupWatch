@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Dns\DnsResolver;
+use App\Services\Dns\SystemDnsResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -15,7 +17,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Tests swap this binding for a fake resolver (PRD §14).
+        $this->app->singleton(DnsResolver::class, SystemDnsResolver::class);
     }
 
     /**
