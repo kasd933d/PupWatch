@@ -74,6 +74,77 @@ export interface Incident {
   status: "open" | "resolved";
 }
 
+export interface StatusPageMonitor {
+  id: number;
+  name: string;
+  display_name: string | null;
+  sort_order: number;
+}
+
+export interface StatusPage {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  show_response_times: boolean;
+  show_error_details: boolean;
+  is_indexable: boolean;
+  accent_color: string | null;
+  logo_url: string | null;
+  public_path: string;
+  monitors?: StatusPageMonitor[];
+  created_at: string;
+}
+
+export type OverallStatus = "operational" | "partial_outage" | "major_outage" | "unknown";
+
+export interface UptimeBar {
+  date: string;
+  total: number;
+  successful: number;
+  uptime: number | null;
+}
+
+export interface PublicStatusMonitor {
+  id: number;
+  name: string;
+  status: MonitorStatus;
+  is_paused: boolean;
+  last_checked_at: string | null;
+  last_response_ms: number | null;
+  uptime_90d: UptimeSummary;
+  bars: UptimeBar[];
+}
+
+export interface PublicIncident {
+  id: number;
+  monitor_id: number;
+  monitor_name: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  status: "open" | "resolved";
+  error_type: string | null;
+  error_message: string | null;
+}
+
+export interface PublicStatusPage {
+  page: {
+    title: string;
+    slug: string;
+    description: string | null;
+    show_response_times: boolean;
+    show_error_details: boolean;
+    is_indexable: boolean;
+    accent_color: string | null;
+    logo_url: string | null;
+  };
+  overall: OverallStatus;
+  monitors: PublicStatusMonitor[];
+  incidents: PublicIncident[];
+  generated_at: string;
+}
+
 export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;

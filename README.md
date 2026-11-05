@@ -118,5 +118,5 @@ pupwatch/
 | 2 | SSRF guard + check engine, dispatcher with atomic claim | ✅ |
 | 3 | Incidents + Telegram/Discord alert channels | ✅ |
 | 4 | Dashboard, charts, uptime, mascot moods | ✅ |
-| 5 | Daily rollups, retention, public status pages | 🚧 |
-| 6 | Polish: landing page, rate limits, seed data, docs | ⬜ |
+| 5 | Daily rollups, retention, public status pages | ✅ |
+| 6 | Polish: landing page, rate limits, seed data, docs | 🚧 |

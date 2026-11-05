@@ -67,4 +67,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(TelegramLinkToken::class);
     }
+
+    /** @return HasMany<StatusPage, $this> */
+    public function statusPages(): HasMany
+    {
+        return $this->hasMany(StatusPage::class);
+    }
 }

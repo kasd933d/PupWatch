@@ -1,4 +1,4 @@
-import type { Monitor } from "./types";
+import type { Monitor, MonitorStatus } from "./types";
 
 /**
  * Mascot moods (PRD §3.1).
@@ -14,17 +14,32 @@ export type Mood = "happy" | "panting" | "sad" | "sleeping" | "curious";
 /** PRD §3.1 — the "slow" threshold for the panting mood. */
 export const SLOW_RESPONSE_MS = 1000;
 
-export function moodForMonitor(monitor: Monitor): Mood {
-  if (monitor.is_paused) return "sleeping";
-  if (monitor.current_status === "down") return "sad";
-  if (monitor.current_status === "pending" || monitor.last_checked_at === null) {
-    return "curious";
-  }
-  if (monitor.last_response_ms !== null && monitor.last_response_ms >= SLOW_RESPONSE_MS) {
+export interface MoodInput {
+  status: MonitorStatus;
+  isPaused: boolean;
+  lastCheckedAt: string | null;
+  lastResponseMs: number | null;
+}
+
+/** Shared by the dashboard and the public status page. */
+export function moodFromStatus(input: MoodInput): Mood {
+  if (input.isPaused) return "sleeping";
+  if (input.status === "down") return "sad";
+  if (input.status === "pending" || input.lastCheckedAt === null) return "curious";
+  if (input.lastResponseMs !== null && input.lastResponseMs >= SLOW_RESPONSE_MS) {
     return "panting";
   }
 
   return "happy";
+}
+
+export function moodForMonitor(monitor: Monitor): Mood {
+  return moodFromStatus({
+    status: monitor.current_status,
+    isPaused: monitor.is_paused,
+    lastCheckedAt: monitor.last_checked_at,
+    lastResponseMs: monitor.last_response_ms,
+  });
 }
 
 /**

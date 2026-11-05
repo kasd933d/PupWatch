@@ -84,6 +84,12 @@ class Monitor extends Model
         return $this->hasMany(Incident::class);
     }
 
+    /** @return HasMany<DailyStat, $this> */
+    public function dailyStats(): HasMany
+    {
+        return $this->hasMany(DailyStat::class);
+    }
+
     /** @return BelongsToMany<NotificationChannel, $this> */
     public function channels(): BelongsToMany
     {

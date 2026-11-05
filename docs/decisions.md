@@ -135,3 +135,31 @@ Next 16's `cacheComponents` refuses to prerender a page whose client component r
 `/monitors/[id]` and `/monitors/[id]/edit` are thin server components that declare
 `export const instant = false` and render the client view inside a `Suspense` fallback. Config
 files stay server-only and the client views remain ordinary hook-based components.
+
+## D16 — 90-day uptime reads rollups, shorter ranges read raw checks (Milestone 5)
+
+Raw `check_results` are pruned at 30 days, so 24h/7d/30d keep counting raw rows (exact, and the
+window still exists), while 90d sums `daily_stats` for completed days and adds today's live
+checks. Today has no rollup row because the nightly job only rolls up days that have ended, which
+also prevents a partial day from being counted twice.
+
+## D17 — Rollups are idempotent upserts, p95 is nearest-rank (Milestone 5)
+
+`RollupService` aggregates one day per monitor with `updateOrCreate` on `(monitor_id, date)`, so
+re-running a day or backfilling after an outage cannot double count. `p95` is the value at
+`ceil(0.95 * n)` over timed checks only; computing it with `ORDER BY … LIMIT 1 OFFSET k` keeps the
+same query working on SQLite and MySQL 8 (which has no `percentile_cont`).
+
+## D18 — Public payloads decide visibility server-side (Milestone 5)
+
+`StatusPageService` is the only place that builds public data: response times and error messages
+are nulled unless the owner enabled them, and display names replace internal monitor names. The
+endpoint caches the payload for 60 seconds in the application cache (key invalidated whenever the
+owner edits the page) and sends `Cache-Control: public, max-age=60`; the Next page renders it
+server-side so no authenticated data can leak into client JS.
+
+## D19 — Status page slugs are reserved-word checked (Milestone 5)
+
+Slugs become public URLs under `/status/[slug]`. Generation lowercases and hyphenates the title,
+retries with `-2`, `-3` on a collision, and both generation and user-supplied slugs reject a small
+reserved list (`api`, `dashboard`, `status`, `login`, …) so a page can never shadow an app route.

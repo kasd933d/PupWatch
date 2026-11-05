@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\MonitorController;
 use App\Http\Controllers\Api\NotificationChannelController;
+use App\Http\Controllers\Api\PublicStatusController;
+use App\Http\Controllers\Api\StatusPageController;
 use App\Http\Controllers\Api\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,6 +37,10 @@ Route::prefix('v1')->group(function () {
     Route::post('/telegram/webhook/{secret}', TelegramWebhookController::class)
         ->middleware('throttle:public');
 
+    // --- Public status pages (no auth, cached 60s) --------------------------
+    Route::get('/public/status/{statusPage:slug}', [PublicStatusController::class, 'show'])
+        ->middleware('throttle:public');
+
     // --- Authenticated API --------------------------------------------------
     Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         // Monitors
@@ -53,6 +59,10 @@ Route::prefix('v1')->group(function () {
 
         // Incidents
         Route::get('/incidents', [IncidentController::class, 'index']);
+
+        // Status pages
+        Route::apiResource('status-pages', StatusPageController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
         // Channels
         Route::get('/channels', [NotificationChannelController::class, 'index']);

@@ -3,6 +3,7 @@ import type {
   Incident,
   Monitor,
   NotificationChannel,
+  StatusPage,
   TelegramLink,
   User,
 } from "./types";
@@ -153,6 +154,23 @@ export const api = {
 
   deleteChannel: (id: number) =>
     request<{ message: string }>(`${API_ROOT}/channels/${id}`, { method: "DELETE" }),
+
+  listStatusPages: () => request<Paginated<StatusPage>>(`${API_ROOT}/status-pages`),
+
+  createStatusPage: (input: Record<string, unknown>) =>
+    request<{ status_page: StatusPage }>(`${API_ROOT}/status-pages`, {
+      method: "POST",
+      body: input,
+    }),
+
+  updateStatusPage: (id: number, input: Record<string, unknown>) =>
+    request<{ status_page: StatusPage }>(`${API_ROOT}/status-pages/${id}`, {
+      method: "PATCH",
+      body: input,
+    }),
+
+  deleteStatusPage: (id: number) =>
+    request<{ message: string }>(`${API_ROOT}/status-pages/${id}`, { method: "DELETE" }),
 
   setMonitorChannels: (id: number, channelIds: number[]) =>
     request<{ monitor: Monitor }>(`${API_ROOT}/monitors/${id}/channels`, {

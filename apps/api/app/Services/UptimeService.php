@@ -3,14 +3,16 @@
 namespace App\Services;
 
 use App\Models\CheckResult;
+use App\Models\DailyStat;
 use App\Models\Monitor;
 use Illuminate\Support\Carbon;
 
 /**
  * Uptime percentages (PRD §11).
  *
- * v1 reads raw check_results; Milestone 5 switches the full past days to
- * daily_stats and keeps today live.
+ * 24h/7d/30d read raw check_results, which are retained for 30 days. The 90d
+ * view cannot: it sums daily_stats for completed days and adds today's live
+ * checks, since today has no rollup row yet (PRD §4.9, §11).
  */
 class UptimeService
 {
@@ -19,6 +21,10 @@ class UptimeService
      */
     public function summary(Monitor $monitor, string $range = '24h'): array
     {
+        if ($range === '90d') {
+            return $this->fromDailyStats($monitor, 90);
+        }
+
         $counts = CheckResult::query()
             ->where('monitor_id', $monitor->id)
             ->where('checked_at', '>=', $this->from($range))
@@ -84,6 +90,39 @@ class UptimeService
         }
 
         return $ranges;
+    }
+
+    /**
+     * Sum rolled-up full days plus live checks from today.
+     *
+     * @return array{total: int, successful: int, uptime: float|null}
+     */
+    public function fromDailyStats(Monitor $monitor, int $days): array
+    {
+        $start = now()->subDays($days)->startOfDay();
+        $today = now()->startOfDay();
+        $lastFullDay = $today->copy()->subDay();
+
+        $rolledUp = DailyStat::query()
+            ->where('monitor_id', $monitor->id)
+            ->whereBetween('date', [$start->toDateString(), $lastFullDay->toDateString()])
+            ->selectRaw('COALESCE(SUM(total_checks), 0) as total, COALESCE(SUM(successful_checks), 0) as successful')
+            ->first();
+
+        $live = CheckResult::query()
+            ->where('monitor_id', $monitor->id)
+            ->where('checked_at', '>=', $today)
+            ->selectRaw('COUNT(*) as total, COALESCE(SUM(CASE WHEN is_success = 1 THEN 1 ELSE 0 END), 0) as successful')
+            ->first();
+
+        $total = (int) ($rolledUp->total ?? 0) + (int) ($live->total ?? 0);
+        $successful = (int) ($rolledUp->successful ?? 0) + (int) ($live->successful ?? 0);
+
+        return [
+            'total' => $total,
+            'successful' => $successful,
+            'uptime' => $total === 0 ? null : round($successful / $total * 100, 2),
+        ];
     }
 
     private function from(string $range): Carbon
