@@ -8,6 +8,29 @@ Discord Webhooks
 
 📖 Full requirements: [PupWatch_PRD.md](PupWatch_PRD.md) · 🧠 Build decisions: [docs/decisions.md](docs/decisions.md)
 
+## What it does
+
+- **Monitors** — add a URL, pick a 60s/5m/15m interval, timeout (5–30s), expected status range,
+  optional keyword check (`must_contain` / `must_not_contain`), up to five custom headers and an
+  "alert after N failures" threshold. Pause and resume take effect immediately.
+- **Checks** — an SSRF-guarded curl request with manual redirect handling, a 1 MB body cap and no
+  stored response bodies. Every result is classified (timeout, DNS, connection, TLS, HTTP status,
+  keyword) and stored in UTC.
+- **Incidents** — one incident per outage, opened when the failure threshold is crossed and
+  resolved by the first success. A flapping guard suppresses alert storms.
+- **Alerts** — Discord webhooks (rich embeds) and Telegram (one-time code linking plus
+  `/status`, `/pause`, `/resume`). Delivery is retried 3× with backoff; a channel that keeps
+  failing is marked `needs_attention` and recovers automatically.
+- **Dashboard** — mascot mood, summary counts, 24h uptime, search and status filters, 30-second
+  polling.
+- **Monitor detail** — response chart (24h / 7d / 30d), uptime chips (24h / 7d / 30d / 90d), last 50
+  checks, incident history, channel linking, check-now (throttled) and pause/edit/delete.
+- **Public status pages** — a server-rendered `/status/[slug]` page with an overall banner, 90-day
+  uptime bars, the mascot, 14 days of incidents, optional response times/error details, accent
+  colour, logo, `noindex` toggle and OG/Twitter metadata. Cached for 60 seconds.
+- **Account** — profile, timezone, password change and full account deletion (cascades to every
+  monitor, check, incident, channel and status page).
+
 ## Architecture
 
 ```
@@ -109,6 +132,61 @@ pupwatch/
 └── PupWatch_PRD.md
 ```
 
+## Operations
+
+The scheduler and queue worker are the two long-running pieces:
+
+```bash
+php artisan schedule:work                              # every minute: dispatch, rollups, pruning
+php artisan queue:work --queue=checks,alerts --tries=1  # checks and alert delivery
+```
+
+Scheduled entries (`routes/console.php`):
+
+| Time | Command | Purpose |
+|---|---|---|
+| every minute | `DispatchDueChecks` | atomic claim + dispatch due checks |
+| every 5 min | `RecoverStuckClaims` | release claims from crashed workers |
+| every 10 min | `PruneExpiredTelegramTokens` | one-time link codes |
+| 00:05 daily | `RollupDailyStats` | aggregate yesterday into `daily_stats` |
+| 03:10 daily | `PruneOldData` | raw checks > 30 days, rollups > 400 days, in chunks |
+
+Backfill a day manually (idempotent):
+
+```bash
+php artisan tinker --execute="(new AppJobsRollupDailyStats('2026-10-01'))(app(AppServicesRollupService::class));"
+```
+
+Health check: `GET /up` (Laravel's built-in endpoint). Failed jobs land in `failed_jobs` as usual.
+
+## Demo data
+
+```bash
+cd apps/api && php artisan db:seed
+```
+
+Creates `demo@pupwatch.dev` / `pupwatch-demo` with three monitors (fast, slow, down), 90 days of
+history and a public page at `/status/pupwatch-demo`. The seeder is refused in production unless
+`DEMO_SEED=true`.
+
+## Security notes
+
+- **SSRF guard** — every outbound request is checked structurally (scheme, port, IP literal) and
+  resolved through an injectable DNS resolver; private, reserved, loopback, link-local and
+  IPv4-mapped IPv6 ranges are rejected. Each redirect hop is re-validated, and the resolved IP is
+  pinned with `CURLOPT_RESOLVE` so DNS cannot change between check and connect.
+- **No response bodies** are stored or returned; only status, timing and a short error.
+- **Secrets at rest** — webhook URLs, Telegram chat ids and custom headers use Laravel's
+  `encrypted` cast and are never serialised into API responses.
+- **Sessions** — Sanctum tokens live in an httpOnly, SameSite=Lax cookie set by Next.js route
+  handlers. The Laravel origin is only reachable server-side; no token touches browser JS.
+- **Authorisation** — policies on monitors, channels and status pages; user ids come from the
+  session, never from request input.
+- **Rate limits** — auth 5/min per IP + email, authenticated API 60/min per user, public endpoints
+  30/min per IP.
+- **Telegram webhook** — secret path segment compared with `hash_equals`; unconfigured secrets
+  reject every call.
+
 ## Milestones
 
 | # | Milestone | Status |
@@ -119,4 +197,4 @@ pupwatch/
 | 3 | Incidents + Telegram/Discord alert channels | ✅ |
 | 4 | Dashboard, charts, uptime, mascot moods | ✅ |
 | 5 | Daily rollups, retention, public status pages | ✅ |
-| 6 | Polish: landing page, rate limits, seed data, docs | 🚧 |
+| 6 | Polish: landing page, settings, demo seed, accessibility, docs | 🚧 (deploy + screenshots outstanding) |

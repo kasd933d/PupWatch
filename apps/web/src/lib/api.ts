@@ -99,6 +99,12 @@ export const api = {
 
   me: () => request<{ user: User }>(`${AUTH_ROOT}/me`),
 
+  updateProfile: (input: Record<string, unknown>) =>
+    request<{ user: User }>(`${AUTH_ROOT}/me`, { method: "PATCH", body: input }),
+
+  deleteAccount: (password: string) =>
+    request<{ message: string }>(`${AUTH_ROOT}/me`, { method: "DELETE", body: { password } }),
+
   listMonitors: () => request<Paginated<Monitor>>(`${API_ROOT}/monitors`),
 
   getMonitor: (id: number) => request<{ monitor: Monitor }>(`${API_ROOT}/monitors/${id}`),

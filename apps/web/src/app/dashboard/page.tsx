@@ -226,6 +226,12 @@ export default function DashboardPage() {
           >
             + New monitor
           </Link>
+          <Link
+            href="/settings"
+            className="rounded-full border border-black/[.08] px-4 py-2 font-medium transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+          >
+            Settings
+          </Link>
           <button
             onClick={async () => {
               await signOut();
