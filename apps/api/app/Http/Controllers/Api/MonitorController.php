@@ -58,6 +58,7 @@ class MonitorController extends Controller
 
     public function show(Monitor $monitor): JsonResponse
     {
+        $monitor->load('channels');
         $monitor->uptime_summary = $this->uptime->summary($monitor, '24h');
         $monitor->uptime_ranges = $this->uptime->allRanges($monitor);
 

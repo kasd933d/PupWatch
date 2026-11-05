@@ -111,3 +111,27 @@ if the table grows.
 `sent` row and revives the channel; `failed()` (called after the last attempt) writes the `failed`
 row and marks the channel `needs_attention`. Test alerts are sent synchronously so the UI can
 report the result immediately.
+
+## D13 — The response-time chart is a small SVG component (Milestone 4)
+
+The PRD allows Recharts or Chart.js. For a single line series with failure markers, a ~150 line
+component avoids a large client dependency, a hydration-only bundle and chart-library theming
+work; the SVG is also readable in the accessibility tree (`role="img"` with a summary label).
+If the dashboard later needs several chart types, swapping this component for Recharts is a
+contained change because pages pass it `{ t, avg_ms, failures }` points only.
+
+## D14 — Mood is derived from monitor state on the client (Milestone 4)
+
+`lib/mood.ts` maps a monitor to one of the five PRD moods (paused → sleeping, down → sad, no
+checks yet → curious, slow but up → panting, otherwise happy); the dashboard aggregates them by
+taking the most concerned mood. Keeping the mapping in one pure function means the detail page,
+dashboard cards and empty states cannot disagree. CSS handles tail wag, rain and Zzz animations
+and disables them under `prefers-reduced-motion`.
+
+## D15 — Dynamic routes use a server wrapper with `instant = false` (Milestone 4)
+
+Next 16's `cacheComponents` refuses to prerender a page whose client component reads
+`useParams`. Route segment config cannot be exported from a `"use client"` file, so
+`/monitors/[id]` and `/monitors/[id]/edit` are thin server components that declare
+`export const instant = false` and render the client view inside a `Suspense` fallback. Config
+files stay server-only and the client views remain ordinary hook-based components.

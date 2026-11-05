@@ -29,7 +29,16 @@ export interface Monitor {
   last_checked_at: string | null;
   last_response_ms: number | null;
   next_check_at: string | null;
+  channel_ids?: number[];
+  uptime?: UptimeSummary | null;
+  uptime_ranges?: Record<string, UptimeSummary> | null;
   created_at: string;
+}
+
+export interface UptimeSummary {
+  total: number;
+  successful: number;
+  uptime: number | null;
 }
 
 export type ChannelType = "telegram" | "discord" | "email";

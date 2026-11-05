@@ -42,7 +42,7 @@ class IncidentController extends Controller
         $this->authorize('view', $monitor);
 
         return IncidentResource::collection(
-            $monitor->incidents()->orderByDesc('started_at')->paginate(50)
+            $monitor->incidents()->with('monitor')->orderByDesc('started_at')->paginate(50)
         );
     }
 }

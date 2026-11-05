@@ -54,7 +54,7 @@ async function request<T>(
 export interface Paginated<T> {
   data: T[];
   links: unknown;
-  meta: unknown;
+  meta: { current_page: number; per_page: number; total: number; last_page: number } | null;
 }
 
 export interface MonitorChartPoint {
@@ -99,6 +99,8 @@ export const api = {
   me: () => request<{ user: User }>(`${AUTH_ROOT}/me`),
 
   listMonitors: () => request<Paginated<Monitor>>(`${API_ROOT}/monitors`),
+
+  getMonitor: (id: number) => request<{ monitor: Monitor }>(`${API_ROOT}/monitors/${id}`),
 
   createMonitor: (input: Record<string, unknown>) =>
     request<{ monitor: Monitor }>(`${API_ROOT}/monitors`, { method: "POST", body: input }),
