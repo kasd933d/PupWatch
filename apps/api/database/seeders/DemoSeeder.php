@@ -58,11 +58,6 @@ class DemoSeeder extends Seeder
         $this->historyFor($portal, 'slow');
         $this->historyFor($docs, 'flaky');
 
-        $docs->forceFill([
-            'last_checked_at' => now()->subMinutes(2),
-            'next_check_at' => now()->addMinutes(3),
-        ])->save();
-
         Incident::create([
             'monitor_id' => $docs->id,
             'started_at' => now()->subMinutes(20),
@@ -172,26 +167,58 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        // Today, live checks (also what the charts read).
-        $checks = $profile === 'flaky' ? 8 : 12;
+        // Raw checks for the last 30 days, every 30 minutes. Short uptime
+        // ranges read raw checks, so the demo needs real coverage there.
+        $rows = [];
+        $now = now();
 
-        for ($i = $checks; $i >= 1; $i--) {
-            $failed = $profile === 'flaky' && $i <= 3;
+        for ($day = 29; $day >= 0; $day--) {
+            for ($slot = 0; $slot < 48; $slot++) {
+                $checkedAt = $now->copy()->subDays($day)->startOfDay()->addMinutes($slot * 30);
 
-            CheckResult::create([
-                'monitor_id' => $monitor->id,
-                'checked_at' => now()->subMinutes($i * 5),
-                'status_code' => $failed ? null : 200,
-                'response_time_ms' => $failed ? null : match ($profile) {
-                    'slow' => random_int(1100, 1900),
-                    'flaky' => random_int(250, 700),
-                    default => random_int(120, 260),
-                },
-                'is_success' => ! $failed,
-                'error_type' => $failed ? 'timeout' : null,
-                'error_message' => $failed ? 'Timed out after 10s' : null,
-            ]);
+                if ($checkedAt->greaterThan($now)) {
+                    continue;
+                }
+
+                $failed = $profile === 'flaky' && ($day * 48 + $slot) % 53 < 2;
+
+                $rows[] = [
+                    'monitor_id' => $monitor->id,
+                    'checked_at' => $checkedAt,
+                    'status_code' => $failed ? null : 200,
+                    'response_time_ms' => $failed ? null : match ($profile) {
+                        'slow' => random_int(1100, 1900),
+                        'flaky' => random_int(250, 700),
+                        default => random_int(120, 260),
+                    },
+                    'is_success' => ! $failed,
+                    'error_type' => $failed ? 'timeout' : null,
+                    'error_message' => $failed ? 'Timed out after 10s' : null,
+                ];
+            }
         }
+
+        // The outage demo needs the three most recent checks to have failed.
+        if ($profile === 'flaky') {
+            $last = count($rows) - 1;
+
+            for ($i = $last; $i > $last - 3; $i--) {
+                $rows[$i]['status_code'] = null;
+                $rows[$i]['response_time_ms'] = null;
+                $rows[$i]['is_success'] = false;
+                $rows[$i]['error_type'] = 'timeout';
+                $rows[$i]['error_message'] = 'Timed out after 10s';
+            }
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            CheckResult::insert($chunk);
+        }
+
+        $monitor->forceFill([
+            'last_checked_at' => $rows[count($rows) - 1]['checked_at'],
+            'next_check_at' => now()->addMinutes(5),
+        ])->save();
     }
 
     /**

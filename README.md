@@ -31,6 +31,28 @@ Discord Webhooks
 - **Account** — profile, timezone, password change and full account deletion (cascades to every
   monitor, check, incident, channel and status page).
 
+## Screenshots
+
+![PupWatch landing page](docs/screenshots/landing.png)
+
+| Dashboard | Monitor detail |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Monitor detail](docs/screenshots/monitor-detail.png) |
+
+| Alert channels | Incidents |
+|---|---|
+| ![Alert channels](docs/screenshots/channels.png) | ![Incidents](docs/screenshots/incidents.png) |
+
+| Public status page | Settings |
+|---|---|
+| ![Public status page](docs/screenshots/status-page.png) | ![Settings](docs/screenshots/settings.png) |
+
+Twelve-second tour — dashboard, then a failing monitor:
+
+![PupWatch demo](docs/screenshots/demo.gif)
+
+Captured from a production build (`next build && next start`) against the demo seed.
+
 ## Architecture
 
 ```
@@ -187,6 +209,44 @@ history and a public page at `/status/pupwatch-demo`. The seeder is refused in p
 - **Telegram webhook** — secret path segment compared with `hash_equals`; unconfigured secrets
   reject every call.
 
+## Deployment
+
+The app is two deployables plus MySQL. Nothing here is deployed for you; pick a host and set the
+variables from the two `.env.example` files.
+
+**API** (PHP 8.3 + MySQL 8). Build once, then run three processes:
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache
+
+php artisan serve --host=0.0.0.0 --port=8000        # or php-fpm behind nginx
+php artisan queue:work --queue=checks,alerts --tries=1 --timeout=60   # one or more workers
+# cron: * * * * * cd /app && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Required: `APP_KEY`, `APP_URL`, `FRONTEND_URL`, `DB_*`, `QUEUE_CONNECTION=database`,
+`CACHE_STORE=database`, `SANCTUM_STATEFUL_DOMAINS`, and for Telegram `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`. Register the webhook with
+`https://api.telegram.org/bot<token>/setWebhook?url=https://api.example.com/api/v1/telegram/webhook/<secret>`.
+
+**Web** (Node 22):
+
+```bash
+npm ci && npm run build
+API_BASE_URL=https://api.example.com NEXT_PUBLIC_APP_URL=https://pupwatch.example.com npm run start
+```
+
+`API_BASE_URL` is server-side only: the browser talks to Next.js route handlers, which forward to the
+API and keep the Sanctum token in an httpOnly cookie.
+
+**Checklist before going live:** HTTPS on both origins, `APP_DEBUG=false`, `APP_ENV=production`,
+the scheduler and at least one worker running, a database backup, and `DEMO_SEED` left unset.
+
+> The Milestone 6 "done when" asks for a public URL. This repository is not deployed: it needs a host
+> with PHP + MySQL for the API and a Node runtime for the web app (or Docker Compose on a VPS).
+
 ## Milestones
 
 | # | Milestone | Status |
@@ -197,4 +257,4 @@ history and a public page at `/status/pupwatch-demo`. The seeder is refused in p
 | 3 | Incidents + Telegram/Discord alert channels | ✅ |
 | 4 | Dashboard, charts, uptime, mascot moods | ✅ |
 | 5 | Daily rollups, retention, public status pages | ✅ |
-| 6 | Polish: landing page, settings, demo seed, accessibility, docs | 🚧 (deploy + screenshots outstanding) |
+| 6 | Polish: landing page, settings, demo seed, accessibility, docs, screenshots, demo GIF | 🚧 (built and documented; not deployed — needs a host) |
