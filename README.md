@@ -243,18 +243,3 @@ API and keep the Sanctum token in an httpOnly cookie.
 
 **Checklist before going live:** HTTPS on both origins, `APP_DEBUG=false`, `APP_ENV=production`,
 the scheduler and at least one worker running, a database backup, and `DEMO_SEED` left unset.
-
-> The Milestone 6 "done when" asks for a public URL. This repository is not deployed: it needs a host
-> with PHP + MySQL for the API and a Node runtime for the web app (or Docker Compose on a VPS).
-
-## Milestones
-
-| # | Milestone | Status |
-|---|---|---|
-| 0 | Setup: monorepo, Laravel + Next.js, Docker Compose, env examples, CI | ✅ |
-| 1 | Auth (Sanctum cookie flow) + monitor CRUD + dashboard list | ✅ |
-| 2 | SSRF guard + check engine, dispatcher with atomic claim | ✅ |
-| 3 | Incidents + Telegram/Discord alert channels | ✅ |
-| 4 | Dashboard, charts, uptime, mascot moods | ✅ |
-| 5 | Daily rollups, retention, public status pages | ✅ |
-| 6 | Polish: landing page, settings, demo seed, accessibility, docs, screenshots, demo GIF | 🚧 (built and documented; not deployed — needs a host) |
