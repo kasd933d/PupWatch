@@ -96,7 +96,7 @@ export default function IncidentsPage() {
 
       <div className="mt-4 space-y-3">
         {listLoading && <p className="text-zinc-500">Loading incidents…</p>}
-        {error && <p className="text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-red-600">{error}</p>}
 
         {!listLoading && !error && incidents.length === 0 && (
           <div className="rounded-xl border border-dashed border-black/[.15] p-10 text-center dark:border-white/[.2]">

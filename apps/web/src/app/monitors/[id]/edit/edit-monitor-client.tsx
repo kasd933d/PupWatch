@@ -51,7 +51,7 @@ export function EditMonitorClient() {
         </p>
       </header>
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-red-600">{error}</p>}
 
       {!monitor && !error && <p className="text-zinc-500">Loading monitor…</p>}
 

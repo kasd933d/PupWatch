@@ -62,7 +62,7 @@ export function EditStatusPageClient() {
         )}
       </header>
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-red-600">{error}</p>}
       {!page && !error && <p className="text-zinc-500">Loading status page…</p>}
 
       {page && (

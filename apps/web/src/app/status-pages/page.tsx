@@ -152,7 +152,7 @@ export default function StatusPagesPage() {
         )}
 
         {listLoading && <p className="text-zinc-500">Loading status pages…</p>}
-        {error && <p className="text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-red-600">{error}</p>}
 
         {!listLoading && !error && pages.length === 0 && !showForm && (
           <div className="rounded-xl border border-dashed border-black/[.15] p-10 text-center dark:border-white/[.2]">
